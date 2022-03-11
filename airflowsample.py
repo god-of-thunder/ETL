@@ -44,7 +44,7 @@ def ETL_sample(data_source,**context):
                 counts = len(df_org.to_dict("records"))
                 logging.info('{0} {1}'.format("資料上傳的資料量",counts))
                 with open (os_path+info_log_path+"{}.log".format(datetime.now().strftime("%Y%m%d")),"a") as f:
-                    f.write('{0}-INFO-{1} {2}\n'.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"),"客戶資料FTP上傳至NAS的資料量",counts))
+                    f.write('{0}-INFO-{1} {2}\n'.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"),"資料上傳的資料量",counts))
                     f.close()
 
                 match = regex.search(filename)
