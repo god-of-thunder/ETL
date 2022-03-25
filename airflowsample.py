@@ -29,7 +29,6 @@ def ETL_sample(data_source,**context):
         column_format_list = ["your ETL column name format list"]
         error_format_path = "your error format path"
         error_encode_path = "your error encode path"
-        encode_list=["big5","utf-8"]
         count_int = 0
         filename_list = os.listdir(os_path+raw_data_path)
         for filename in filename_list:
@@ -39,18 +38,17 @@ def ETL_sample(data_source,**context):
             target_encoding = check_encoding.read()
             encode =chardet.detect(target_encoding)["encoding"].lower()
             check_encoding.close()
-            if encode in encode_list:
-                df_org = pd.read_csv(os_path+backup_path+filename,encoding=encode,engine='python')
-                counts = len(df_org.to_dict("records"))
-                logging.info('{0} {1}'.format("資料上傳的資料量",counts))
-                with open (os_path+info_log_path+"{}.log".format(datetime.now().strftime("%Y%m%d")),"a") as f:
-                    f.write('{0}-INFO-{1} {2}\n'.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"),"資料上傳的資料量",counts))
-                    f.close()
-
-                match = regex.search(filename)
-                if match:
+            match = regex.search(filename)
+            if match:
+                try:
+                    df_org = pd.read_csv(os_path+backup_path+filename,encoding="your encode",engine='python')
+                    counts = len(df_org.to_dict("records"))
+                    logging.info('{0} {1}'.format("資料上傳的資料量",counts))
+                    with open (os_path+info_log_path+"{}.log".format(datetime.now().strftime("%Y%m%d")),"a") as f:
+                        f.write('{0}-INFO-{1} {2}\n'.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"),"資料上傳的資料量",counts))
+                        f.close()
                     match_dataname_file = os_path+backup_path+match.group()
-                    df = pd.read_csv(match_dataname_file,encoding=encode,engine='python')
+                    df = pd.read_csv(match_dataname_file,encoding="your encode",engine='python')
                     df = df.rename(columns=lambda x: x.strip())
                     df = df.rename(columns=lambda c: column_replacing_pair[c] if c in column_replacing_pair.keys() else c)
                     column_name_list = df.columns.values.tolist()
@@ -124,28 +122,30 @@ def ETL_sample(data_source,**context):
                             raise RuntimeError                     
                     else:
                         error_counts = len(df.to_dict("records"))
+                        logging.info("{0} {1}".format("上傳的欄位名稱",column_name_list))
                         logging.info('{0} {1}'.format("欄位名稱錯誤的資料量",error_counts))
                         with open (os_path+info_log_path+"{}.log".format(datetime.now().strftime("%Y%m%d")),"a") as f:
                             f.write('{0}-INFO-{1} {2}\n'.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"),"欄位名稱錯誤的資料量",error_counts))
                             f.close()
                         os.system("cp {0} {1}".format(match_dataname_file,os_path+error_format_path+match_dataname_file.split("/")[-1])) 
                         logging.info("{} is format error to be sent to format error folder".format(match_dataname_file.split("/")[-1]))
-                else:
-                    logging.info("{} is filename error to be sent to filename error folder".format(filename))
-                    df_org = pd.read_csv(os_path+backup_path+filename,encoding=encode,engine='python')
-                    counts = len(df_org.to_dict("records"))
-                    logging.info('{0} {1}'.format("檔名錯誤的資料量",counts)) 
+                   
+                except:           
+                    logging.info("{} is encode error to be sent to encode error folder".format(filename))
+                    logging.info('{0} {1}'.format(filename,"檔案編碼錯誤")) 
                     with open (os_path+info_log_path+"{}.log".format(datetime.now().strftime("%Y%m%d")),"a") as f:
-                            f.write('{0}-INFO-{1} {2}\n'.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"),"檔名錯誤的資料量",counts))
-                            f.close() 
-                    os.system("cp {0} {1}".format(os_path+backup_path+filename,os_path+error_filename_path))
-            else:           
-                logging.info("{} is encode error to be sent to encode error folder".format(filename))
-                logging.info('{0} {1}'.format(filename,"檔案編碼錯誤")) 
+                        f.write('{0}-INFO-{1} {2}\n'.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"),filename,"檔案編碼錯誤"))
+                        f.close() 
+                    os.system("cp {0} {1}".format(os_path+backup_path+filename,os_path+error_encode_path))
+            else:
+                logging.info("{} is filename error to be sent to filename error folder".format(filename))
+                df_org = pd.read_csv(os_path+backup_path+filename,encoding="your encode",engine='python')
+                counts = len(df_org.to_dict("records"))
+                logging.info('{0} {1}'.format("檔名錯誤的資料量",counts)) 
                 with open (os_path+info_log_path+"{}.log".format(datetime.now().strftime("%Y%m%d")),"a") as f:
-                    f.write('{0}-INFO-{1} {2}\n'.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"),filename,"檔案編碼錯誤"))
-                    f.close() 
-                os.system("cp {0} {1}".format(os_path+backup_path+filename,os_path+error_encode_path))         
+                        f.write('{0}-INFO-{1} {2}\n'.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"),"檔名錯誤的資料量",counts))
+                        f.close() 
+                os.system("cp {0} {1}".format(os_path+backup_path+filename,os_path+error_filename_path))    
 
 
 with DAG("ETL_sample", catchup=False, default_args=default_args,schedule_interval='* */1 * * *') as dag:
