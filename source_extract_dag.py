@@ -8,6 +8,7 @@ import subprocess
 from datetime import datetime,timedelta
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
+from airflow.hooks.base_hook import BaseHook
 
 default_args = {
     "owner":"Vincent",
@@ -75,24 +76,20 @@ def ETL_sample(data_source,**context):
                             }
                         )
                         # use mongoimport to load file
-                        MONGO_HOST = "your mongodb host"
-                        MONGO_PORT = "your mongodb port"
-                        MONGO_USER = "your mongodb user"
-                        MONGO_PASSWORD = "your mongodb password"
-                        MONGO_DB = "your mongodb database"
-                        data_type = "your insert mongodb collection"
+                        conn = BaseHook.get_connection('demo_db')
+                        collection = "your insert mongodb collection"
                         mongoimport_process = subprocess.Popen(
                                 [
                                 "mongoimport",
                                 # Auth
-                                f"--host={MONGO_HOST}",
-                                f"--port={MONGO_PORT}",
-                                f"--username={MONGO_USER}",
-                                f"--password={MONGO_PASSWORD}",
-                                f"--authenticationDatabase={MONGO_DB}",
+                                f"--host={conn.host}",
+                                f"--port={conn.port}",
+                                f"--username={conn.login}",
+                                f"--password={conn.password}",
+                                f"--authenticationDatabase={conn.schema}",
                                 # # setting
-                                f"--db={MONGO_DB}",
-                                f"--collection={data_type}",
+                                f"--db={conn.schema}",
+                                f"--collection={collection}",
                                 "--type=csv",
                                 "--headerline",
                                 "--ignoreBlanks",
