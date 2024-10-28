@@ -8,15 +8,23 @@ from airflow import DAG
 from airflow.models import Variable
 from airflow.operators.python_operator import PythonOperator
 from airflow.hooks.base_hook import BaseHook
+from airflow.utils.email import send_email
 import warnings,traceback
 warnings.filterwarnings('ignore')
 
 default_args = {
     "owner":"airflow",
-    "start_date":datetime(2022,3,11),
-    "retries":2,
-    "retry_delay":timedelta(minutes=1),
-    "dependents_on_past":True
+    "start_date":datetime(2024,10,28),
+    "dependents_on_past":False,
+    'email_on_failure': True,
+    'email_on_retry': False,
+    'retries': 1,
+    'retry_delay': timedelta(minutes=5),
+    'on_failure_callback': lambda context: send_email(
+        to='your-email@example.com',
+        subject=f"Airflow Task Failed: {context['task_instance_key_str']}",
+        html_content="Task failed. Check Airflow logs for details."
+    )
 }
 
 def download_from_s3(**context):
