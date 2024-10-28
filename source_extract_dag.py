@@ -5,18 +5,29 @@ import re
 import logging
 import pandas as pd
 import subprocess
+import boto3
 from datetime import datetime,timedelta
 from airflow import DAG
+from airflow.models import Variable
 from airflow.operators.python_operator import PythonOperator
 from airflow.hooks.base_hook import BaseHook
 
 default_args = {
-    "owner":"Vincent",
+    "owner":"airflow",
     "start_date":datetime(2022,3,11),
     "retries":2,
     "retry_delay":timedelta(minutes=1),
     "dependents_on_past":True
 }
+
+def download_from_s3(**context):
+    s3 = boto3.client(
+        's3',
+        aws_access_key_id = Variable.get("s3_access_key"),
+        aws_secret_access_key = Variable.get("s3_scecret_key"),
+        region_name = context["dag_run"].conf.get("region")
+    )
+    s3.download_file(context["dag_run"].conf.get("bucket"), '/source/file.csv', '/tmp/file.csv')
 
 def ETL_sample(data_source,**context):    
     if len(os.listdir("your os workdir path"))>0:
@@ -42,37 +53,37 @@ def ETL_sample(data_source,**context):
             match = regex.search(filename)
             if match:
                 try:
-                    df_org = pd.read_csv(os_path+backup_path+filename,encoding="your encode",engine='python')
+                    df_org = pd.read_csv(os_path+backup_path+filename,encoding="utf-8",engine='python')
                     counts = len(df_org.to_dict("records"))
                     logging.info('{0} {1}'.format("資料上傳的資料量",counts))
                     with open (os_path+info_log_path+"{}.log".format(datetime.now().strftime("%Y%m%d")),"a") as f:
                         f.write('{0}-INFO-{1} {2}\n'.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"),"資料上傳的資料量",counts))
                         f.close()
                     match_dataname_file = os_path+backup_path+match.group()
-                    df = pd.read_csv(match_dataname_file,encoding="your encode",engine='python')
+                    df = pd.read_csv(match_dataname_file,encoding="utf-8",engine='python')
                     df = df.rename(columns=lambda x: x.strip())
                     df = df.rename(columns=lambda c: column_replacing_pair[c] if c in column_replacing_pair.keys() else c)
                     column_name_list = df.columns.values.tolist()
                     if set(column_name_list) & set(column_format_list)==set(column_format_list):
-                        df["sample time"] = pd.to_datetime(df["sample time"])        
-                        df["sample time"] = pd.Series(
-                                    df["sample time"]
+                        df["date"] = pd.to_datetime(df["date"])        
+                        df["date"] = pd.Series(
+                                    df["date"]
                                     .dt.tz_localize("Etc/GMT-8")
                                     .dt.tz_convert("UTC")
                                     .dt.tz_localize(None)
                                     .dt.to_pydatetime(),
                                     dtype=object,
                                 )
-                        df["sample numeric value"] = pd.to_numeric(df["sample numeric value"], "coerce")
-                        df["sample concatenate result"] = df["sample need to concatenate"].astype(str).apply(lambda s:s.strip()) + "-" + df["sample need to concatenate"].astype(str)
+                        df["value"] = pd.to_numeric(df["value"], "coerce")
+                        df["description"] = df["description"].astype(str).apply(lambda s:s.strip()) + "-" + df["sample need to concatenate"].astype(str)
                         df = df.drop(["no use column name list"], axis=1)
 
                         import_df = df.rename(
                             columns={
-                                "sample name": "name.string()",
-                                "sample concatenate result": "result.string()",
-                                "sample numeric value": "value.double()",
-                                "sample time": "time.date(2006-01-02 15:04:05)",
+                                "name": "name.string()",
+                                "description": "result.string()",
+                                "value": "value.double()",
+                                "date": "time.date(2006-01-02 15:04:05)",
                             }
                         )
                         # use mongoimport to load file
@@ -146,12 +157,17 @@ def ETL_sample(data_source,**context):
 
 
 with DAG("ETL_sample", catchup=False, default_args=default_args,schedule_interval='* */1 * * *') as dag:
-    ETL_sample = PythonOperator(
-        task_id="ETL_sample",
-        python_callable=ETL_sample,
-        op_args=["sample"],
+    download_task = PythonOperator(
+        task_id = "download_from_s3",
+        python_callable = download_from_s3,
+        provide_context = True
+    )
+    ETL_process = PythonOperator(
+        task_id = "ETL_sample",
+        python_callable = ETL_sample,
+        op_args = ["sample"],
     )
     
     
     # define workflow
-    ETL_sample  
+    download_task >> ETL_process  
