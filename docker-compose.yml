@@ -1,0 +1,36 @@
+version: '3.9'
+
+services:
+
+  db:
+    image: postgres:15
+    container_name: ecommerce_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ecommerce
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./backend
+    container_name: ecommerce_backend
+    volumes:
+      - ./backend:/app
+    command: >
+      sh -c "sleep 10 &&
+             uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+  frontend:
+    image: nginx:latest
+    container_name: ecommerce_frontend
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+
