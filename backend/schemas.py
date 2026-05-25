@@ -13,3 +13,8 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     email: str
     password: str
+
+
+class CartCreate(BaseModel):
+    product_id: int
+    quantity: int

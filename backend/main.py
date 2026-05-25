@@ -1,8 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine, Base
-from models import Product, User
-from schemas import ProductCreate, UserCreate, UserLogin
+from models import Product, User, CartItem, Order, OrderItem
+from schemas import ProductCreate, UserCreate, UserLogin, CartCreate
 from auth import hash_password, verify_password, create_access_token
 
 Base.metadata.create_all(bind=engine)
@@ -112,3 +112,82 @@ def login(user: UserLogin):
     db.close()
 
     return {"access_token": token, "token_type": "bearer"}
+
+
+@app.post("/cart")
+def add_to_cart(cart: CartCreate):
+
+    db = SessionLocal()
+
+    cart_item = CartItem(
+        user_id=1,
+        product_id=cart.product_id,
+        quantity=cart.quantity
+    )
+
+    db.add(cart_item)
+    db.commit()
+    db.refresh(cart_item)
+
+    db.close()
+
+    return cart_item
+
+
+@app.get("/cart")
+def get_cart():
+
+    db = SessionLocal()
+
+    items = db.query(CartItem).filter(
+        CartItem.user_id == 1
+    ).all()
+
+    db.close()
+
+    return items
+
+
+@app.post("/checkout")
+def checkout():
+
+    db = SessionLocal()
+
+    cart_items = db.query(CartItem).filter(
+        CartItem.user_id == 1
+    ).all()
+
+    if not cart_items:
+        db.close()
+        raise HTTPException(status_code=400, detail="Cart is empty")
+
+    order = Order(user_id=1)
+
+    db.add(order)
+    db.commit()
+    db.refresh(order)
+
+    for item in cart_items:
+
+        order_item = OrderItem(
+            order_id=order.id,
+            product_id=item.product_id,
+            quantity=item.quantity
+        )
+
+        db.add(order_item)
+
+    db.commit()
+
+    # clear cart
+    for item in cart_items:
+        db.delete(item)
+
+    db.commit()
+
+    db.close()
+
+    return {
+        "message": "Order created",
+        "order_id": order.id
+    }
