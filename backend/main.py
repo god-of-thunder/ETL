@@ -1,9 +1,9 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException,Depends
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine, Base
 from models import Product, User, CartItem, Order, OrderItem
 from schemas import ProductCreate, UserCreate, UserLogin, CartCreate
-from auth import hash_password, verify_password, create_access_token
+from auth import hash_password, verify_password, create_access_token, get_current_user
 
 Base.metadata.create_all(bind=engine)
 
@@ -115,17 +115,21 @@ def login(user: UserLogin):
 
 
 @app.post("/cart")
-def add_to_cart(cart: CartCreate):
+def add_to_cart(
+    cart: CartCreate,
+    current_user: User = Depends(get_current_user)
+):
 
     db = SessionLocal()
 
     cart_item = CartItem(
-        user_id=1,
+        user_id=current_user.id,
         product_id=cart.product_id,
         quantity=cart.quantity
     )
 
     db.add(cart_item)
+
     db.commit()
     db.refresh(cart_item)
 
@@ -135,12 +139,14 @@ def add_to_cart(cart: CartCreate):
 
 
 @app.get("/cart")
-def get_cart():
+def get_cart(
+    current_user: User = Depends(get_current_user)
+):
 
     db = SessionLocal()
 
     items = db.query(CartItem).filter(
-        CartItem.user_id == 1
+        CartItem.user_id == current_user.id
     ).all()
 
     db.close()
@@ -149,19 +155,21 @@ def get_cart():
 
 
 @app.post("/checkout")
-def checkout():
+def checkout(
+    current_user: User = Depends(get_current_user)
+):
 
     db = SessionLocal()
 
     cart_items = db.query(CartItem).filter(
-        CartItem.user_id == 1
+        CartItem.user_id == current_user.id
     ).all()
 
     if not cart_items:
         db.close()
         raise HTTPException(status_code=400, detail="Cart is empty")
 
-    order = Order(user_id=1)
+    order = Order(user_id=current_user.id)
 
     db.add(order)
     db.commit()
@@ -179,7 +187,6 @@ def checkout():
 
     db.commit()
 
-    # clear cart
     for item in cart_items:
         db.delete(item)
 
