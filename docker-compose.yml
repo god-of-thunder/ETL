@@ -105,7 +105,18 @@ services:
       - ./notebooks:/home/jovyan/work
 
     depends_on:
-      - spark-master    
+      - spark-master 
+
+  metabase:
+    image: metabase/metabase:latest
+
+    container_name: metabase
+
+    ports:
+      - "3000:3000"
+
+    depends_on:
+      - db       
 
 volumes:
   postgres_data:
