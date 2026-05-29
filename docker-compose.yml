@@ -1,4 +1,3 @@
-version: '3.9'
 
 services:
 
@@ -12,25 +11,125 @@ services:
       POSTGRES_DB: ecommerce
     ports:
       - "5432:5432"
+    volumes:
+    - postgres_data:/var/lib/postgresql/data  
 
   backend:
-    build: ./backend
+    build: 
+      context: .
+      dockerfile: Dockerfile
     container_name: ecommerce_backend
+    working_dir: /app
     volumes:
-      - ./backend:/app
+      - .:/app
+    env_file:
+      - app/core/.env  
     command: >
       sh -c "sleep 10 &&
-             uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     ports:
       - "8000:8000"
     depends_on:
       - db
 
-  frontend:
-    image: nginx:latest
-    container_name: ecommerce_frontend
-    ports:
-      - "8080:80"
-    volumes:
-      - ./frontend:/usr/share/nginx/html
 
+  airflow:
+    image: apache/airflow:2.9.1
+
+    container_name: airflow
+
+    ports:
+      - "8080:8080"
+
+    environment:
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:postgres@db:5432/ecommerce
+
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+
+    command: >
+      bash -c "
+      airflow db migrate &&
+      airflow users create \
+        --username admin \
+        --password admin \
+        --firstname admin \
+        --lastname admin \
+        --role Admin \
+        --email admin@test.com || true &&
+      airflow standalone
+      "
+
+    depends_on:
+      - db    
+
+  spark-master:
+    image: apache/spark:3.5.1
+
+    container_name: spark-master
+
+    command: >
+      /opt/spark/bin/spark-class
+      org.apache.spark.deploy.master.Master
+
+    ports:
+      - "8081:8080"
+      - "7077:7077"
+
+  spark-worker:
+    image: apache/spark:3.5.1
+
+    container_name: spark-worker
+
+    command: >
+      /opt/spark/bin/spark-class
+      org.apache.spark.deploy.worker.Worker
+      spark://spark-master:7077
+
+    depends_on:
+      - spark-master
+
+  jupyter:
+    build: ./jupyter
+
+    container_name: pyspark-dev
+
+    ports:
+      - "8888:8888"
+
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+      - PYSPARK_PYTHON=/usr/bin/python3.8
+      - PYSPARK_DRIVER_PYTHON=/usr/bin/python3.8
+
+    volumes:
+      - ./notebooks:/home/jovyan/work
+
+    depends_on:
+      - spark-master 
+
+  metabase:
+    image: metabase/metabase:latest
+
+    container_name: metabase
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: ecommerce
+      MB_DB_PORT: 5432
+      MB_DB_USER: postgres
+      MB_DB_PASS: postgres
+      MB_DB_HOST: db 
+
+    depends_on:
+      - db       
+
+volumes:
+  postgres_data:
