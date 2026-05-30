@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import os
 
-print(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+
 class Settings(BaseSettings):
 
     PROJECT_NAME: str = "Production E-commerce API"
