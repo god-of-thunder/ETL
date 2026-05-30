@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, ForeignKey, String, Float, DateTime
 from sqlalchemy.orm import relationship
 
-from app.models.base import Base, TimestampMixin
+from app.db.base import Base, TimestampMixin
 
 
 class Payment(Base, TimestampMixin):

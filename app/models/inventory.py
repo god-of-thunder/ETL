@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, ForeignKey, String
 
-from app.models.base import Base, TimestampMixin
+from app.db.base import Base, TimestampMixin
 
 
 class InventoryMovement(Base, TimestampMixin):

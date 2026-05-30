@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, Text, Boolean
 from sqlalchemy.orm import relationship
 
-from app.models.base import Base, TimestampMixin, SoftDeleteMixin
+from app.db.base import Base, TimestampMixin, SoftDeleteMixin
 
 
 class Product(Base, TimestampMixin, SoftDeleteMixin):
