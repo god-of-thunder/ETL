@@ -9,6 +9,7 @@ class UserCreate(BaseModel):
     password: str
     full_name: Optional[str] = None
     phone: Optional[str] = None
+    city: Optional[str] = None
 
 
 class UserLogin(BaseModel):
@@ -19,6 +20,7 @@ class UserLogin(BaseModel):
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
+    city: Optional[str] = None
 
 
 class UserResponse(BaseModel):
@@ -27,6 +29,7 @@ class UserResponse(BaseModel):
     username: str
     full_name: Optional[str]
     phone: Optional[str]
+    city: Optional[str]
     created_at: datetime
 
     class Config:

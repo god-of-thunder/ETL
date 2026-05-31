@@ -20,6 +20,8 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
 
     phone = Column(String)
 
+    city = Column(String)
+
     last_login_at = Column(DateTime)
 
     orders = relationship("Order", back_populates="user")
