@@ -6,14 +6,14 @@ import random
 fake = Faker()
 
 engine = create_engine(
-    "postgresql://postgres:postgres@localhost:5432/ecommerce"
+    "postgresql://postgres:postgres@db:5432/ecommerce"
 )
 
 users = []
 
 for i in range(1000):
     users.append({
-        "username": fake.username(),
+        "username": fake.name(),
         "email": fake.email(),
         "city": fake.city(),
     })
