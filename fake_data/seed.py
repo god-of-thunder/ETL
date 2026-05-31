@@ -13,9 +13,9 @@ users = []
 
 for i in range(1000):
     users.append({
-        "name": fake.name(),
+        "username": fake.username(),
         "email": fake.email(),
-        "country": fake.country(),
+        "city": fake.city(),
     })
 
 users_df = pd.DataFrame(users)

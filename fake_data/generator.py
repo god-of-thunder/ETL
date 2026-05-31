@@ -6,7 +6,7 @@ fake = Faker()
 
 def generate_user():
     return {
-        "name": fake.name(),
+        "username": fake.username(),
         "email": fake.email(),
         "city": fake.city(),
     }
